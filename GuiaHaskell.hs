@@ -365,3 +365,5 @@ entrelazar (x:xs) ys = if null ys then x : entrelazar xs [] else x : head ys : e
 -}
 entrelazarConFoldr :: [a] -> [a] -> [a]
 entrelazarConFoldr = foldr (\x rec ys -> if null ys then x : (rec []) else x : head ys : rec (tail ys)) id 
+{-foldr :: (a -> b -> b) -> b -> [a] -> b
+si la lambda es (\x rec ys -> ...) x::a , rec ys :: b por lo que rec :: b -> b y ys :: b -}
