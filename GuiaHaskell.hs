@@ -570,3 +570,5 @@ aparecen en el subárbol izquierdo y es estrictamente menor que los valores que 
 derecho-}
 
 {-e) Justificar la elección de los esquemas de recursión utilizados para los tres puntos anteriores-}
+{-foldr :: (a -> b -> b) -> b -> [a] -> b
+si la lambda es (\x rec ys -> ...) x::a , rec ys :: b por lo que rec :: b -> b y ys :: b -}
