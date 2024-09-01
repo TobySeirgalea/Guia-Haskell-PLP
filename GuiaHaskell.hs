@@ -83,8 +83,7 @@ promedioGeneral [] = 0
 promedioGeneral (x:xs) = sumarLista (x:xs) / fromIntegral (length (x:xs))
 
 sumarLista :: [Float] -> Float
-sumarLista [] = 0
-sumarLista (x:xs) = x + sumarLista xs
+sumarLista xs = foldr (+) 0 xs
 
 sumarALista :: Float -> [Float] -> [Float]
 sumarALista _ [] = []
@@ -96,7 +95,7 @@ todosIguales [] = True
 todosIguales [_] = True
 todosIguales (x:y:ys) = x == y && todosIguales (y:ys)
 
-data AB a = Nil | Bin (AB a) a (AB a) deriving Show
+data AB'' a = Nil' | Bin' (AB'' a) a (AB'' a) deriving Show
 
 --Indica si un árbol es vacío (i.e. no tiene nodos).
 vacioAB :: AB a -> Bool
@@ -138,10 +137,10 @@ predecesor :: Float -> Float --Está currificada
 predecesor = subtract' 1
 
 evaluarEnCero :: (Float -> Float) -> Float --Está currificada
-evaluarEnCero = \f -> f 0
+evaluarEnCero f = f 0
 
 dosVeces :: (a -> a) -> (a -> a) --Está currificada
-dosVeces = \f -> f . f
+dosVeces f = f . f
 
 {- Tipo de map = (a -> b) -> ([a] -> [b]), tipo de flip = (A -> B -> C) -> (B -> (A -> C)) 
  map va a recibir a flip como función, entonces el tipo de flip es igual a (a -> b)
@@ -176,7 +175,7 @@ uncurry' f (x, y) = f x y
 {-Ejercicio 3:-}
 --Redefinir usando foldr las funciones sum, elem, (++), filter y map.
 sum' :: [Int] -> Int
-sum' = foldr (+) 0
+sum' = sum
 
 elem' :: (Eq a) => a -> [a] -> Bool
 elem' elemento = foldr (\x rec -> x == elemento || rec) False
@@ -186,7 +185,7 @@ elem' elemento = foldr (\x rec -> x == elemento || rec) False
 (++.) (y:ys) xs = y: (ys ++. xs)
 
 (++-) :: [a] -> [a] -> [a]
-(++-) ys xs = foldr (\m rec -> m:rec) xs ys
+(++-) ys xs = foldr ((:)) xs ys
 --En correccion usamos ys como parametro sobre el que hacemos recursion
 
 -- (++-) xs = foldr (\m rec -> m:rec ) (xs)  
@@ -202,7 +201,7 @@ filter' :: (a -> Bool) -> [a] -> [a]
 filter' f = foldr (\x rec -> if f x then x:rec else rec) []
 
 map' :: (a -> b) -> [a] -> [b]
-map' f = foldr (\x rec -> f x : rec) []
+map' f = map (\ x -> f x)
 
 {-Definir la función mejorSegún :: (a -> a -> Bool) -> [a] -> a, que devuelve el máximo elemento
 de la lista según una función de comparación, utilizando foldr1. Por ejemplo, maximum = mejorSegún (>).-}
@@ -213,7 +212,7 @@ mejorSegun f = foldr1 (\x rec -> if f x rec then x else rec)
 otra de la misma longitud, que tiene en cada posición la suma parcial de los elementos de la lista original
 desde la cabeza hasta la posición actual. Por ejemplo, sumasParciales [1,4,-1,0,5] ;[1,5,4,4,9] -}
 sumasParcialesError :: Num a => [a] -> [a]
-sumasParcialesError xs = foldl (\acc x -> if null acc then x:acc else (sum(acc)+x):xs ) [] xs
+sumasParcialesError xs = foldl (\acc x -> if null acc then x:acc else (sum acc+x):xs ) [] xs
 {-
 sumasParciales [1,4,-1,0,5] = foldl (\acc x -> if null acc then x:acc else (sum(acc)+x):[1,4,-1,0,5] ) [] [1,4,-1,0,5]
 foldl (\[] x -> if null acc then [x] else (sum(acc)+x):[1,4,-1,0,5] ) [] [1,4,-1,0,5]
@@ -231,7 +230,7 @@ sumasParciales = foldl (\acc x -> if null acc then [x] else acc ++ [last acc + x
 {-Definir la función sumaAlt, que realiza la suma alternada de los elementos de una lista. Es decir, da como
 resultado: el primer elemento, menos el segundo, más el tercero, menos el cuarto, etc. Usar foldr.-}
 sumaAlt :: Num a => [a] -> a
-sumaAlt = foldr (\x rec -> x-rec) 0 --veo a x como primero y rec como segundo
+sumaAlt = foldr ((-)) 0 --veo a x como primero y rec como segundo
 --Podemos verlo así: foldr f [1,2,3,4,5,6] = f 1 (f 2 (f 3 (f 4 (f 5(f 6))))) si f = (-) -> 1-(2-(3-(4-(5-(6-0)))))
 --1-(2-(3-(4-(5-6)))) = 1-(2-(3-5)) = 1-(2-(-2)) = 1-(4) = - 3
 
@@ -258,20 +257,20 @@ Si meto el 1 en todos los lugares posibles y los guardo tengo de 1 y [3,2] -> [1
 de 1 y [2,3] -> [1,2,3],[2,1,3],[2,3,1] juntandolas tengo todas las permutaciones, para esto puedo usar concatMap
 -}
 insertar :: a -> Int -> [a] -> [a]
-insertar x i xs = (take i xs)++x:(drop i xs) 
+insertar x i xs = take i xs++x:drop i xs
 
 insertarEnTodasPartesHasta :: Int -> a -> [a] -> [[a]]
-insertarEnTodasPartesHasta n x xs |n >= 0 = insertar x n xs : insertarEnTodasPartesHasta (n-1) x xs 
+insertarEnTodasPartesHasta n x xs |n >= 0 = insertar x n xs : insertarEnTodasPartesHasta (n-1) x xs
                                   |otherwise = []
 --Otra alternativa por si no se puede usar listas por compresión
 insertarEnTodasPartes'' :: a -> [a] -> [[a]]
 insertarEnTodasPartes'' x xs = insertarEnTodasPartesHasta (length xs) x xs
 --Como n siempre queremos que se mueva entre [0,length xs] podemos hacerlo directo así:
 insertarEnTodasPartes' :: a -> [a] -> [[a]]
-insertarEnTodasPartes' x xs = [insertar x i xs | i <- [0..length xs]] 
+insertarEnTodasPartes' x xs = [insertar x i xs | i <- [0..length xs]]
 --Ahora hay que pasar permutaciones de recursion 
 permutaciones' :: [a] -> [[a]]
-permutaciones' = foldr (\x rec -> concatMap (insertarEnTodasPartes'' x) rec) [[]]
+permutaciones' = foldr (concatMap . insertarEnTodasPartes'') [[]]
 
 
 {-Definir la función partes, que recibe una lista L y devuelve la lista de todas las listas formadas por los
@@ -279,7 +278,7 @@ mismos elementos de L, en su mismo orden de aparición.
 Ejemplo: partes [5, 1, 2] → [[], [5], [1], [2], [5, 1], [5, 2], [1, 2], [5, 1, 2]]
 (en algún orden)-}
 partesExplicita :: [a] -> [[a]]
-partesExplicita = foldr (agregarATodas2) [[]] 
+partesExplicita = foldr agregarATodas2 [[]]
 {-
 agregarATodas 5 (agregarATodas 2 (agregarATodas 1 []))
 -}
@@ -300,33 +299,32 @@ agregarATodasV2 :: a -> [[a]] -> [[a]]
 agregarATodasV2 elem = foldr (\x rec -> [elem:x] ++ [x] ++ rec) []
 
 partes :: [a] -> [[a]]
-partes = foldr (agregarATodasV2) [[]]
+partes = foldr agregarATodasV2 [[]]
 
 {-Definir la función prefijos, que dada una lista, devuelve todos sus prefijos.
 Ejemplo: prefijos [5, 1, 2] → [[], [5], [5, 1], [5, 1, 2]]-}
 prefijos :: [a] -> [[a]]
-prefijos = foldl (\acc x -> ((head acc) ++ [x] ):acc ) [[]]
+prefijos = foldl (\acc x -> (head acc ++ [x] ):acc ) [[]]
 
 prefijosE :: [a] -> [[a]]
-prefijosE [] = [[]]
-prefijosE (x:xs) = agregarAdelanteATodasLasQueEstan x (prefijosE xs)
+prefijosE xs = foldr agregarAdelanteATodasLasQueEstan [[]] xs
 
 prefijosConFoldr :: [a] -> [[a]]
-prefijosConFoldr = foldr (agregarAdelanteATodasLasQueEstan) [[]]
+prefijosConFoldr = foldr agregarAdelanteATodasLasQueEstan [[]]
 --Queda bien porque la proxima cabeza que tomo la pongo adelante de todos los resultados recursivos
 
 agregarAdelanteATodasLasQueEstan :: a -> [[a]] -> [[a]]
-agregarAdelanteATodasLasQueEstan y = foldr (\x rec -> [y:x] ++ rec) [[]]
+agregarAdelanteATodasLasQueEstan y = foldr (\x rec -> (y:x) : rec) [[]]
 --predfijos [2] = [[2],[]] prefijos [1,2] = [1,2],[1] prefijos [5,1,2] = [5,1,2], [5,1], [5]
 --Voy recorriendo hacia adelante la lista, en cada paso tomo la cabeza acumulada, le agrego el elemento actual al final y la pongo adelante de mi acumulado
 --Así en proxima es a esa misma lista a la que le agrego al final el siguiente elemento
 sufijos :: [a] -> [[a]]
 sufijos [] = [[]]
-sufijos (x:xs) = (x: head(sufijos xs)) : sufijos xs  
+sufijos (x:xs) = (x: head (sufijos xs)) : sufijos xs
 --Voy recorriendo de atras hacia adelante, acumulando en rec. 
 --sufijos [1,2] -> [[1,2],[2]]. Para obtener sufijos [0,1,2] = [[0,1,2] [1,2] [2]] debo agregar x a la cabeza de la recursion
 sufijos' :: [a] -> [[a]]
-sufijos' = foldr (\x rec -> (x:head(rec)) : rec) [[]]
+sufijos' = foldr (\x rec -> (x:head rec) : rec) [[]]
 
 -- f 5 (f 1 (f 2 [])) -> 
 -- f 2 (f 1 (f 5 [])) ->  
@@ -340,10 +338,10 @@ Ejemplo: sublistas [5, 1, 2] → [[], [5], [1], [2], [5, 1], [1, 2], [5, 1, 2]]
 (en algún orden).-}
 --OBS!: prefijos de cada uno de los sufijos = sublistas = sufijo de cada uno de los prefijos
 sublistas1 :: [a] -> [[a]]
-sublistas1 xs = filter (not.null) (concatMap sufijos' (prefijos xs)) 
+sublistas1 xs = concatMap (filter (not.null) . sufijos') (prefijos xs)
 --Si quiero aplicar una función a todas las listas de una lista y recibir una lista con todos los resultados de aplicar esa funcion a cada lista concatenados USO concatMap
 sublistas2 :: [a] -> [[a]]
-sublistas2 xs = filter (not.null) (concatMap prefijos (sufijos' xs)) 
+sublistas2 xs = concatMap (filter (not.null) . prefijos) (sufijos' xs)
 
 {-Ejercicio 5-}
 {-Considerar las siguientes funciones:-}
@@ -364,4 +362,211 @@ entrelazar (x:xs) ys = if null ys then x : entrelazar xs [] else x : head ys : e
     Teniendo esto en cuenta notar que solo accedemos a xs cuando es el resultado de la recursion. Es estructural
 -}
 entrelazarConFoldr :: [a] -> [a] -> [a]
-entrelazarConFoldr = foldr (\x rec ys -> if null ys then x : (rec []) else x : head ys : rec (tail ys)) id 
+entrelazarConFoldr = foldr (\x rec ys -> if null ys then x : rec [] else x : head ys : rec (tail ys)) id
+{-foldr :: (a -> b -> b) -> b -> [a] -> b entonces cuando ponemos 3 parámetros en la lambda queda x::a, rec ys::b por lo tanto rec :: b -> b, ys::b 
+por eso en la lambda simpre luego de rec paso una lista
+-}
+{-Ejercicio 6-}
+{-Esquema de recursión primitiva sobre listas-}
+--Función recibe cabeza, cola de lista y recursión sobre cola y retorna tipo salida
+--Caso base es de tipo salida
+recr :: (a -> [a] -> b -> b) -> b -> [a] -> b
+recr f b [] = b
+recr f b (x:xs) = f x xs (recr f b xs)
+--x::a, xs::[a], (recr f b xs) :: b
+{-Definir la función sacarUna :: Eq a => a -> [a] -> [a], que dados un elemento y una lista devuelve el
+resultado de eliminar de la lista la primera aparición del elemento (si está presente).-}
+sacarUna :: Eq a => a -> [a] -> [a]
+sacarUna elem = recr (\x xs rec -> if x == elem then xs else x:rec) []
+--Si encontraste el elemento, retorna la cola, así solo sacás su primera aparición
+--Si no es el elemento entonces agregalo a la recursión sobre la cola. Así no sacás nada que no sea la primera aparición de elemento
+
+{-Explicar p or qué el esquema de recursión estructural (foldr) no es adecuado para implementar la función
+sacarUna del punto anterior
+RTA: No es adecuado porque necesito tener acceso a la lista sin la recursión aplicada sobre ella, ya que quiero solo sacar la primera aparición de elemento.
+Si no tengo acceso a la cola sin la recursión entonces sacaría todas las apariciones-}
+
+{-Definir la función insertarOrdenado :: Ord a => a -> [a] -> [a] que inserta un elemento en una lista
+ordenada (de manera creciente), de manera que se preserva el ordenamiento.
+-}
+insertarOrdenado :: Ord a => a -> [a] -> [a]
+insertarOrdenado elem = recr (\x xs rec -> if x < elem && elem < head xs then x:elem:xs else x:rec ) [elem]
+--Falla con 0 [1,2,3,4,5,6,7,8,9] -> [1,2,3,4,5,6,7,8,9,0] porque entro siempre en else 
+
+insertarOrdenadoV2 :: Ord a => a -> [a] -> [a]
+insertarOrdenadoV2 elem = recr (\x xs listaConElemInsertadoOrdenado -> if elem > x then x:listaConElemInsertadoOrdenado else elem:x:xs) [elem]
+--Si es mayor que el actual, entonces meto el actual delante de la lista con el elemento insertado ordenado, sino entonces es menor y debe estar antes que el actual.
+
+{-Ejercicio 7-}
+{-Definir la función genLista :: a -> (a -> a) -> Integer -> [a], que genera una lista de una cantidad dada de elementos, 
+a partir de un elemento inicial y de una función de incremento entre los elementos de la lista. 
+Dicha función de incremento, dado un elemento de la lista, devuelve el elemento siguiente.-}
+-- a es el elemento inicial, (a->a) es la función incremento, Integer la cantidad de elementos, [a] tipo retorno
+genLista :: a -> (a -> a) -> Integer -> [a]
+genLista _ _ 0 = []
+genLista init incr size = init:genLista (incr init) incr (size-1)
+
+genListaFoldr :: a -> (a -> a) -> Integer -> [a]
+genListaFoldr init incr size = foldr (\x rec -> if size == toInteger (length rec) then rec else incr (head rec):rec) [init] (take (fromIntegral size) [1..])
+{-
+genListaFoldr init incr size = foldr (\x rec -> if size == toInteger(length rec) then rec else incr(head rec):rec) [init] [init] 1 (+2) 4
+foldr (\1 rec -> if 4 == toInteger(length rec) then rec else (+2)(head rec):rec) [1] [1]
+rec = [init] Entonces necesito pasarle a foldr una lista de tamaño size 
+-}
+genList :: a -> (a -> a) -> Integer -> [a]
+genList init f size = foldl (\acc x -> if toInteger (length acc) == size then acc else acc ++ [f (last acc)]) [init] (take (fromIntegral size) [1..])
+
+{-Usando genLista, definir la función desdeHasta, que dado un par de números (el primero menor que el
+segundo), devuelve una lista de números consecutivos desde el primero hasta el segundo.-}
+desdeHasta :: Integer -> Integer -> [Integer]
+desdeHasta d h = genList d (+1) (h-d+1)
+
+{-Ejercicio 8-}
+{-Definir las siguientes funciones para trabajar sobre listas, y dar su tipo. Todas ellas deben poder aplicarse a
+listas finitas e infinitas.
+1) mapPares, una versión de map que toma una función currificada de dos argumentos y una lista de pares
+de valores, y devuelve la lista de aplicaciones de la función a cada par. Pista: recordar curry y uncurry
+-}
+mapPares :: (a -> b -> c) -> [(a, b)] -> [c]
+mapPares f = map (uncurry f)
+
+{-2)armarPares, que dadas dos listas arma una lista de pares que contiene, en cada posición, el elemento
+correspondiente a esa posición en cada una de las listas. Si una de las listas es más larga que la otra,
+ignorar los elementos que sobran (el resultado tendrá la longitud de la lista más corta). Esta función en
+Haskell se llama zip. Pista: aprovechar la currificación y utilizar evaluación parcial. -}
+armarPares :: [a] -> [b] -> [(a,b)]
+armarPares = foldr (\x rec ys -> if null ys then [] else (x, head ys):rec (tail ys)) (const [])
+
+{-3) mapDoble, una variante de mapPares, que toma una función currificada de dos argumentos y dos listas
+(de igual longitud), y devuelve una lista de aplicaciones de la función a cada elemento corresp ondiente de
+las dos listas. Esta función en Haskell se llama zipWith. -}
+mapDoble :: (a -> b -> c) -> [a] -> [b] -> [c]
+mapDoble f xs ys = map (uncurry f) (armarPares xs ys)
+
+{-Ejercicio 9-}
+{-Escribir la función sumaMat, que representa la suma de matrices, usando zipWith. Representaremos una
+matriz como la lista de sus filas. Esto quiere decir que cada matriz será una lista finita de listas finitas,
+to das de la misma longitud, con elementos enteros. Recordamos que la suma de matrices se define como
+la suma celda a celda. Asumir que las dos matrices a sumar están bien formadas y tienen las mismas
+dimensiones.
+-}
+sumaMat :: [[Int]] -> [[Int]] -> [[Int]]
+sumaMat = foldr (\x rec ys -> zipWith (+) x (head ys) : rec (tail ys)) (const [])
+{-zipWith (+) recibe dos listas (filas de matriz) suma celda a celda y retorna los resultados en una lista.
+Si a cada lista le hacemos zipWith (+) con la de la otra matriz y agregamos el resultado a la lista de listas obtenida de hacer recursión sobre la siguiente filas de ambas matrices
+-}
+
+{-2).Escribir la función trasponer, que, dada una matriz como las del ítem i, devuelva su traspuesta. Es decir,
+en la posición i, j del resultado está el contenido de la posición j, i de la matriz original. Notar que si la
+entrada es una lista de N listas, todas de longitud M, la salida debe tener M listas, todas de longitud N.
+trasponer :: [[Int]] -> [[Int]]-}
+trasponer :: [[Int]] -> [[Int]]
+trasponer = foldr (\fila rec -> insertarEnCadaColumna fila rec) []
+{-
+[[1,2,3],  [[1,4],
+ [4,5,6]]   [2,5],        
+            [3,6]]
+Asumiendo que tenemos [[4],[5],[6]] ¿Qué debo hacer con [1,2,3] para tener la traspuesta?. Debo agregar cada elemento al principio de una de las columnas
+-}
+--Con recursión explícita
+insertarAlInicioDeCada :: [Int] -> [[Int]] -> [[Int]]
+insertarAlInicioDeCada xs [] = []
+insertarAlInicioDeCada [] yss = yss
+insertarAlInicioDeCada (x:xs) yss = (x: head yss) : insertarAlInicioDeCada xs (tail yss)
+--Con foldr
+insertarEnCadaColumna :: [Int] -> [[Int]] -> [[Int]]
+insertarEnCadaColumna = recr (\x xs rec yss -> if (not.null) yss then (x: head yss) : rec (tail yss) else insertarComoCols (x:xs) ) (const [])
+--OBS! como en recursión explícita usamos un patrón para yss == [], acá en el fold debemos agregarlo con if then else
+--Si no hay más columnas debo hacer que los elementos de la fila que quiero poner se conviertan en columnas para que sea el caso base. Eso lo hace insertar como cols    
+insertarComoCols :: [Int] -> [[Int]]
+insertarComoCols = foldr (\x rec -> [x] : rec) []
+
+{-Ejercicio 10-}
+{-a) Definir y dar el tipo del esquema de recursión foldNat sobre los naturales. Utilizar el tipo Integer de
+Haskell (la función va a estar definida sólo para los enteros mayores o iguales que 0).-}
+foldNat :: (Integer -> Integer -> Integer) -> Integer -> Integer -> Integer
+foldNat casoRec casoBase n = case n of 
+                            0 -> casoBase 
+                            n -> casoRec n (rec (n-1))
+                            where rec = foldNat casoRec casoBase
+
+{-b) Utilizando foldNat, definir la función potencia.-}
+potencia :: Integer ->  Integer
+potencia = foldNat (*) 1 --esto es factorial
+--Quiero hacer recursión sobre n, entonces n debe ser el exponente
+--pot :: Integer -> Integer -> Integer
+{-
+pot 2 3 = 2 * pot 2 2 = 2*2*pot 2 1 = 2*2*2*pot 2 0 = 2*2*2*1 = 8
+-}
+potenciaExplicita :: Integer -> Integer -> Integer 
+potenciaExplicita _ 0 = 1 
+potenciaExplicita base exp = base * potenciaExplicita base (exp-1)
+--Lo pasamos a foldNat
+potenciaV2 :: Integer -> Integer -> Integer 
+potenciaV2 base = foldNat (\exp rec -> base*rec) 1
+--En foldNat, nuestra lambda tiene (\decrementador resultado recursion)
+--Por eso foldNat (*) 1 = foldNat (\dec rec -> dec * rec) 1 = n*(n-1)*...*1 que es factorial. En cambio en potencia queremos hacer base* base exp veces
+
+{-Ejercicio 11-}
+{-Definir el esquema de recursión estructural para el siguiente tipo:-}
+data Polinomio a = X | Cte a | Suma (Polinomio a) (Polinomio a) | Prod (Polinomio a) (Polinomio a)
+{-Luego usar el esquema definido para escribir la función evaluar :: Num a => a -> Polinomio a -> a
+que, dado un número y un polinomio, devuelve el resultado de evaluar el polinomio dado en el número dado.-}
+
+{-¿Cómo lo hacemos?: Vemos los tipos de sus constructores
+X :: Polinomio a                                                                   ---Constructor base
+Cte a :: a -> Polinomio a                                                          ---Constructor base
+Suma (Polinomio a) (Polinomio a) :: Polinomio a -> Polinomio a -> Polinomio a      ---Constructor recursivo
+Prod (Polinomio a) (Polinomio a) :: Polinomio a -> Polinomio a -> Polinomio a      ---Constructor recursivo
+El tipo de foldPolinomio será :: (b -> b -> b) -> (b -> b -> b) -> b -> (a -> b) -> Polinomio a -> b
+                                casoSuma      casoProd   casoX   casoCte    Estructura    tipoRetorno
+-}
+foldPolinomio :: (b-> b -> b) -> (b-> b -> b) -> b -> (a -> b) -> Polinomio a -> b
+foldPolinomio casoSuma casoProd casoX casoCte poli = case poli of 
+                                                    X -> casoX
+                                                    Cte n -> casoCte n --Si tiene parámetros se los paso
+                                                    Suma p q -> casoSuma (rec p) (rec q) --Si es recursivo aplico la función pero sobre resultados recursión sus parámetros
+                                                    Prod p q -> casoProd (rec p) (rec q)
+                                                    where rec = foldPolinomio casoSuma casoProd casoX casoCte 
+evaluar :: Num a => a -> Polinomio a -> a
+evaluar n = foldPolinomio (\recSumando1 recSumando2 -> recSumando1+recSumando2) (\factor1 factor2 -> factor1*factor2) n (\cteK -> cteK)
+--Se define qué se quiere hacer en cada caso con cada constructor posible. Si hay una suma quiero sumar los resultados de evaluar cada polinomio de la suma, lo mismo con producto, si es una variable la quiero reemplazar por n y si es una cte quiero que sea la misma
+polinomio1 = Suma (Prod (Suma (X) (Cte 3)) (X) ) (Prod (Suma (X) (Cte (-11))) (X)) -- X*(3+X) + (-11 + X)*X = 3X + X^2 - 11X + X^2 = 2X^2 - 8X
+
+{-Ejercicio 12-}
+{-Considerar el siguiente tipo, que representa a los árboles binarios:-}
+data AB a = Nil | Bin (AB a) a (AB a)
+{-a) Usando recursión explícita, definir los esquemas de recursión estructural (foldAB) y primitiva (recAB), y
+dar sus tipos.-}
+-- Nil:: AB a , Bin :: AB a -> a -> AB a -> AB a
+--(recSobreIzq -> raiz -> recSobreDer -> salida) -> salidaCasoBase -> Estructura -> salida
+foldAB :: (b -> a -> b -> b) -> b -> AB a -> b
+foldAB casoBin casoNil arbol = case arbol of 
+                               Bin i r d -> casoBin (rec i) r (rec d)
+                               Nil -> casoNil 
+                            where rec = foldAB casoBin casoNil
+--El orden en que declaré los parámetros en el tipo lo debo respetar al poner los parámetros en casoBin
+recrAB :: (b -> a -> b -> AB a -> AB a -> b) -> b -> AB a -> b 
+recrAB casoBin casoNil arbol = case arbol of 
+                                Nil -> casoNil
+                                Bin i r d -> casoBin (rec i) r (rec d) i d 
+                            where rec = recrAB casoBin casoNil 
+{-b) Definir las funciones esNil, altura y cantNodos (para esNil puede utilizarse case en lugar de foldAB
+o recAB).-}
+esNil :: AB a -> Bool 
+esNil Nil = True
+esNil _ = False
+
+altura :: AB a -> Int
+altura = foldAB (\recIzq r recDer -> recIzq + 1 + recDer) 0
+{-c) Definir la función mejorSegún :: (a -> a -> Bool) -> AB a -> a, análoga a la del ejercicio 3, para árboles.
+Se recomienda definir una función auxiliar para comparar la raíz con un posible resultado de la recursión
+para un árbol que puede o no ser Nil.-}
+
+
+{-d) Definir la función esABB :: Ord a => AB a -> Bool que chequea si un árbol es un árbol binario de búsqueda.
+Recordar que, en un árbol binario de búsqueda, el valor de un nodo es mayor o igual que los valores que
+aparecen en el subárbol izquierdo y es estrictamente menor que los valores que aparecen en el subárbol
+derecho-}
+
+{-e) Justificar la elección de los esquemas de recursión utilizados para los tres puntos anteriores-}
