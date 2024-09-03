@@ -408,6 +408,16 @@ genLista init incr size = init:genLista (incr init) incr (size-1)
 
 genListaFoldr :: a -> (a -> a) -> Integer -> [a]
 genListaFoldr init incr size = foldr (\x rec -> if size == toInteger (length rec) then rec else incr (head rec):rec) [init] (take (fromIntegral size) [1..])
+
+genListaFoldrOrden :: a -> (a -> a) -> Integer -> [a]
+genListaFoldrOrden init incr size = foldr (\x rec -> if size == toInteger (length rec) then rec else incr rec ++ [incr head rec]) [init] (take (fromIntegral size) [1..])
+
+
+genListFoldN :: a->(a->a)->Integer ->[a]
+genListFoldN init incr size= foldNat (\x rec -> (incr head rec) : rec) [init] size
+
+
+
 {-
 genListaFoldr init incr size = foldr (\x rec -> if size == toInteger(length rec) then rec else incr(head rec):rec) [init] [init] 1 (+2) 4
 foldr (\1 rec -> if 4 == toInteger(length rec) then rec else (+2)(head rec):rec) [1] [1]
