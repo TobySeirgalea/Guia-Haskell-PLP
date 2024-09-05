@@ -813,9 +813,8 @@ hash = agregar 71(agregar 23(agregar 2(agregar 5 (vacío (flip mod 5)))))
 hash2 = agregar 1(agregar 28(agregar 2(agregar 6 (vacío (*5)))))
 {-4) intersección :: Eq a => HashSet a -> HashSet a -> HashSet a que, dados dos conjuntos, devuelve un conjunto con la misma función de Hash del primero y con los elementos que pertenecen a ambos
 conjuntos a la vez.-}
-intersección :: Eq a => HashSet a -> HashSet a -> HashSet a
-intersección (Hash funcionHash1 tablaHash1) (Hash funcionHash2 tablaHash2) = 
-    Hash funcionHash1 (\n -> if tablaHash2 )
+-- intersección :: Eq a => HashSet a -> HashSet a -> HashSet a
+-- intersección (Hash funcionHash1 tablaHash1) (Hash funcionHash2 tablaHash2) = Hash funcionHash1 (\clave -> if (clave `elem` tablaHash1 (funcionHash1 clave)) && (clave `elem` tablaHash2 (funcionHash2 clave)) then [clave] else []) 
 --dados dos hashsets con la misma funcion de hash si n está en uno y en otro -> Está en intersección
 --si a un hashset le cambio la funcion de hash pero dejo su tabla, 
 --fhash dado un elemento -> indice en tabla de elementos con esa clave
@@ -826,6 +825,74 @@ intersección (Hash funcionHash1 tablaHash1) (Hash funcionHash2 tablaHash2) =
 --t debe ser :: Integer -> [a] y retornar lista con los que estaban en tablaHash1 y 2
 --t recibe un numero que es una clave, para ver si hay uno en tabla1 hacemos clave tabla1 
 
-{-5) foldr1(no relacionada con los conjuntos). Dar el tip o y definir la función foldr1 para listas sin usar
+{-5) foldr1(no relacionada con los conjuntos). Dar el tipo y definir la función foldr1 para listas sin usar
 recursión explícita, recurriendo a alguno de los esquemas de recursión conocidos.
 Se recomienda usar la función error :: String -> a para el caso de la lista vacía.-}
+foldr11 :: (a -> a -> a) -> [a] -> a --No tiene tipo b porque al usar como acumulador el último elemento de la lista y ser este del mismo tipo de la lista -> tipo retorno debe ser del mismo
+foldr11 f = foldr f (error "No se puede utilizar foldr1 con lista vacía")--Usamos como acumulador último elemento lista
+
+
+{-Generación infinita-}
+{-Ejercicio 17-}
+-- ¿Cuál es el valor de esta expresión?
+lista1a3 = [ x | x <- [1..3], y <- [x..3], (x + y) `mod` 3 == 0 ]
+{-RTA: Retona una lista con todos los x de 1 a 3 que sumados a otro numero de x a 3 den 3.
+x = 1 y = 1, 2 mod 3 != 0 -> no agrego 1, x = 1 y = 2, 3 mod 3 == 0 -> agrego 1, x = 1 y = 3 , 4 mod 3 != 0 -> no agrego 1 .:. 1 pertenece a lista
+x = 2 y = 2, 4 mod 3 != 0 -> no agrego 2, x = 2 y = 3, 5 mod 3 != 0 -> no agrego 2 .:. 2 no pertenece
+x = 3 y = 3, 6 mod 3 == 0 -> agrego 3 .:. 3 pertenece
+Luego la lista es [1,3]-}
+
+{-Ejercicio 18-}
+--Definir la lista infinita paresDeNat::[(Int,Int)], que contenga todos los pares de números naturales: (0,0), (0,1), (1,0), etc.
+paresDeNat :: [(Int,Int)]
+--paresDeNat = [(x,y) | x <- [1..], y <- [1..x]] --Genera solo los que crecen hacia un lado, e.g. (3,1),(3,2),(3,3),(4,1),(4,2),(4,3),(4,4),etc...
+paresDeNat = [(x,y) | s <- [1..], x <- [1..s], y <- [1..s], x + y == s]
+
+{-Ejercicio 19-}
+--Una tripla pitagórica es una tripla (a, b, c) de enteros positivos tal que a2+ b2= c2.
+--La siguiente expresión intenta ser una definición de una lista (infinita) de triplas pitagóricas:
+pitagóricas :: [(Integer, Integer, Integer)]
+pitagóricas = [(a, b, c) | a <- [1..], b <-[1..], c <- [1..], a^2 + b^2 == c^2]
+--Explicar por qué esta definición no es útil. Dar una definición mejor.
+{-RTA: No es útil porque como hay varios generadores infinitos, el c nunca va a parar y no va a permitir que el b y a avancen, entonces se quedan clavados en 1-}
+pitagoricasBien :: [(Integer, Integer, Integer)]
+pitagoricasBien = [(a, b, c) | s <- [1..], a <- [1..s], b <- [1..s-a], c <- [1..s-a-b], a^2 + b^2 == c^2]
+
+testPitagoricas :: [(Integer, Integer, Integer)] -> Bool
+testPitagoricas = foldr (\x rec -> ((fst x)^2 + (snd x)^2 == (thrd x)^2) && rec) True
+                    where thrd (_,_,a) = a
+                          snd (_,a,_)  = a
+                          fst (a,_,_)  = a
+{-Ejercicio 20-}
+{-Escribir la función listasQueSuman :: Int -> [[Int]] que, dado un número natural n, devuelve todas las
+listas de enteros positivos (es decir, mayores o iguales que 1) cuya suma sea n. Para este ejercicio se permite
+usar recursión explícita. Pensar por qué la recursón utilizada no es estructural. (Este ejercicio no es de
+generación infinita, pero puede ser útil para otras funciones que generen listas infinitas de listas).-}
+listasQueSuman :: Int -> [[Int]]
+listasQueSuman 0 = []
+listasQueSuman n = [xs | xs <- listasQueSumanNDeLongitd n n]
+
+listasQueSumanNDeLongitd :: Int -> Int -> [[Int]]
+listasQueSumanNDeLongitd 0 0 = [[]]
+listasQueSumanNDeLongitd l n = [x:xs | x <- [1..n], xs <- listasQueSumanNDeLongitd (l-1) (n-x)] 
+
+testListasQueSumanN :: Int -> [[Int]] -> Bool
+testListasQueSumanN n = foldr (\x rec -> sum x == n && rec) True
+--Por qué no es estructural? 
+
+{-Ejercicio 21-}
+--Definir en Haskell una lista que contenga todas las listas finitas de enteros positivos (esto es, con elementos mayores o iguales que 1).
+listasDeEnteros :: [[Int]]
+listasDeEnteros = [x:xs | s <- [1..], x <- [1..s], xs <- listasQueSuman (s-x)]
+
+{-Ejercicio 22-}
+--Dado el tipo de datos AIH a definido en el ejercicio 14:
+--a) Definir la lista (infinita) de todos los AIH cuyas hojas tienen tipo (). Se recomienda definir una función auxiliar. Para este ejercicio se permite utilizar recursión explícita.
+--b) Explicar por qué la recursión utilizada en el punto a) no es estructural.
+--El tipo (), usualmente conocido como unit, tiene un único valor, denotado como ().
+listaInfAIH :: [AIH ()]
+listaInfAIH = []
+
+listaAIHConNnodos :: AIH () -> [AIH ()]
+listaAIHConNnodos 1  Hoja _ = []
+listaAIHConNnodos n ()= 
