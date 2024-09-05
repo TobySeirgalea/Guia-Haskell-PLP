@@ -83,7 +83,7 @@ promedioGeneral [] = 0
 promedioGeneral (x:xs) = sumarLista (x:xs) / fromIntegral (length (x:xs))
 
 sumarLista :: [Float] -> Float
-sumarLista xs = foldr (+) 0 xs
+sumarLista = sum
 
 sumarALista :: Float -> [Float] -> [Float]
 sumarALista _ [] = []
@@ -185,7 +185,7 @@ elem' elemento = foldr (\x rec -> x == elemento || rec) False
 (++.) (y:ys) xs = y: (ys ++. xs)
 
 (++-) :: [a] -> [a] -> [a]
-(++-) ys xs = foldr ((:)) xs ys
+(++-) ys xs = foldr (:) xs ys
 --En correccion usamos ys como parametro sobre el que hacemos recursion
 
 -- (++-) xs = foldr (\m rec -> m:rec ) (xs)  
@@ -201,7 +201,7 @@ filter' :: (a -> Bool) -> [a] -> [a]
 filter' f = foldr (\x rec -> if f x then x:rec else rec) []
 
 map' :: (a -> b) -> [a] -> [b]
-map' f = map (\ x -> f x)
+map' = map
 
 {-Definir la función mejorSegún :: (a -> a -> Bool) -> [a] -> a, que devuelve el máximo elemento
 de la lista según una función de comparación, utilizando foldr1. Por ejemplo, maximum = mejorSegún (>).-}
@@ -230,7 +230,7 @@ sumasParciales = foldl (\acc x -> if null acc then [x] else acc ++ [last acc + x
 {-Definir la función sumaAlt, que realiza la suma alternada de los elementos de una lista. Es decir, da como
 resultado: el primer elemento, menos el segundo, más el tercero, menos el cuarto, etc. Usar foldr.-}
 sumaAlt :: Num a => [a] -> a
-sumaAlt = foldr ((-)) 0 --veo a x como primero y rec como segundo
+sumaAlt = foldr (-) 0 --veo a x como primero y rec como segundo
 --Podemos verlo así: foldr f [1,2,3,4,5,6] = f 1 (f 2 (f 3 (f 4 (f 5(f 6))))) si f = (-) -> 1-(2-(3-(4-(5-(6-0)))))
 --1-(2-(3-(4-(5-6)))) = 1-(2-(3-5)) = 1-(2-(-2)) = 1-(4) = - 3
 
@@ -307,7 +307,7 @@ prefijos :: [a] -> [[a]]
 prefijos = foldl (\acc x -> (head acc ++ [x] ):acc ) [[]]
 
 prefijosE :: [a] -> [[a]]
-prefijosE xs = foldr agregarAdelanteATodasLasQueEstan [[]] xs
+prefijosE = foldr agregarAdelanteATodasLasQueEstan [[]]
 
 prefijosConFoldr :: [a] -> [[a]]
 prefijosConFoldr = foldr agregarAdelanteATodasLasQueEstan [[]]
@@ -406,18 +406,19 @@ genLista :: a -> (a -> a) -> Integer -> [a]
 genLista _ _ 0 = []
 genLista init incr size = init:genLista (incr init) incr (size-1)
 
+genListFoldNN :: Integer -> a -> (a -> a) -> [a]
+genListFoldNN 0 = \init incr -> []
+genListFoldNN n = \init incr -> init:genListFoldNN (n-1) (incr init) incr
+
+genListFoldN :: Integer -> a -> (a -> a) -> [a]
+genListFoldN n init incr = foldNat (\x rec -> rec ++ [incr (last rec)]) [init] (n-1)
+--Le pongo n-1 a la derecha para contrarrestar que foldNat va hasta cero
+
 genListaFoldr :: a -> (a -> a) -> Integer -> [a]
 genListaFoldr init incr size = foldr (\x rec -> if size == toInteger (length rec) then rec else incr (head rec):rec) [init] (take (fromIntegral size) [1..])
 
 genListaFoldrOrden :: a -> (a -> a) -> Integer -> [a]
-genListaFoldrOrden init incr size = foldr (\x rec -> if size == toInteger (length rec) then rec else incr rec ++ [incr head rec]) [init] (take (fromIntegral size) [1..])
-
-
-genListFoldN :: a->(a->a)->Integer ->[a]
-genListFoldN init incr size= foldNat (\x rec -> (incr head rec) : rec) [init] size
-
-
-
+genListaFoldrOrden init incr size = foldr (\x rec -> if size == toInteger (length rec) then rec else rec ++ [(incr.last) rec]) [init] (take (fromIntegral size) [1..])
 {-
 genListaFoldr init incr size = foldr (\x rec -> if size == toInteger(length rec) then rec else incr(head rec):rec) [init] [init] 1 (+2) 4
 foldr (\1 rec -> if 4 == toInteger(length rec) then rec else (+2)(head rec):rec) [1] [1]
@@ -471,7 +472,7 @@ en la posición i, j del resultado está el contenido de la posición j, i de la
 entrada es una lista de N listas, todas de longitud M, la salida debe tener M listas, todas de longitud N.
 trasponer :: [[Int]] -> [[Int]]-}
 trasponer :: [[Int]] -> [[Int]]
-trasponer = foldr (\fila rec -> insertarEnCadaColumna fila rec) []
+trasponer = foldr insertarEnCadaColumna []
 {-
 [[1,2,3],  [[1,4],
  [4,5,6]]   [2,5],        
@@ -489,14 +490,15 @@ insertarEnCadaColumna = recr (\x xs rec yss -> if (not.null) yss then (x: head y
 --OBS! como en recursión explícita usamos un patrón para yss == [], acá en el fold debemos agregarlo con if then else
 --Si no hay más columnas debo hacer que los elementos de la fila que quiero poner se conviertan en columnas para que sea el caso base. Eso lo hace insertar como cols    
 insertarComoCols :: [Int] -> [[Int]]
-insertarComoCols = foldr (\x rec -> [x] : rec) []
+insertarComoCols = map ((: []))
 
 {-Ejercicio 10-}
 {-a) Definir y dar el tipo del esquema de recursión foldNat sobre los naturales. Utilizar el tipo Integer de
 Haskell (la función va a estar definida sólo para los enteros mayores o iguales que 0).-}
-foldNat :: (Integer -> Integer -> Integer) -> Integer -> Integer -> Integer
-foldNat casoRec casoBase n = case n of 
-                            0 -> casoBase 
+-- foldNat :: (Integer -> Integer -> Integer) -> Integer -> Integer -> Integer
+foldNat :: (Integer -> b -> b) -> b -> Integer -> b
+foldNat casoRec casoBase n = case n of
+                            0 -> casoBase
                             n -> casoRec n (rec (n-1))
                             where rec = foldNat casoRec casoBase
 
@@ -508,11 +510,11 @@ potencia = foldNat (*) 1 --esto es factorial
 {-
 pot 2 3 = 2 * pot 2 2 = 2*2*pot 2 1 = 2*2*2*pot 2 0 = 2*2*2*1 = 8
 -}
-potenciaExplicita :: Integer -> Integer -> Integer 
-potenciaExplicita _ 0 = 1 
+potenciaExplicita :: Integer -> Integer -> Integer
+potenciaExplicita _ 0 = 1
 potenciaExplicita base exp = base * potenciaExplicita base (exp-1)
 --Lo pasamos a foldNat
-potenciaV2 :: Integer -> Integer -> Integer 
+potenciaV2 :: Integer -> Integer -> Integer
 potenciaV2 base = foldNat (\exp rec -> base*rec) 1
 --En foldNat, nuestra lambda tiene (\decrementador resultado recursion)
 --Por eso foldNat (*) 1 = foldNat (\dec rec -> dec * rec) 1 = n*(n-1)*...*1 que es factorial. En cambio en potencia queremos hacer base* base exp veces
@@ -532,53 +534,287 @@ El tipo de foldPolinomio será :: (b -> b -> b) -> (b -> b -> b) -> b -> (a -> b
                                 casoSuma      casoProd   casoX   casoCte    Estructura    tipoRetorno
 -}
 foldPolinomio :: (b-> b -> b) -> (b-> b -> b) -> b -> (a -> b) -> Polinomio a -> b
-foldPolinomio casoSuma casoProd casoX casoCte poli = case poli of 
+foldPolinomio casoSuma casoProd casoX casoCte poli = case poli of
                                                     X -> casoX
                                                     Cte n -> casoCte n --Si tiene parámetros se los paso
                                                     Suma p q -> casoSuma (rec p) (rec q) --Si es recursivo aplico la función pero sobre resultados recursión sus parámetros
                                                     Prod p q -> casoProd (rec p) (rec q)
-                                                    where rec = foldPolinomio casoSuma casoProd casoX casoCte 
+                                                    where rec = foldPolinomio casoSuma casoProd casoX casoCte
 evaluar :: Num a => a -> Polinomio a -> a
-evaluar n = foldPolinomio (\recSumando1 recSumando2 -> recSumando1+recSumando2) (\factor1 factor2 -> factor1*factor2) n (\cteK -> cteK)
+evaluar n = foldPolinomio (+) (*) n id
 --Se define qué se quiere hacer en cada caso con cada constructor posible. Si hay una suma quiero sumar los resultados de evaluar cada polinomio de la suma, lo mismo con producto, si es una variable la quiero reemplazar por n y si es una cte quiero que sea la misma
-polinomio1 = Suma (Prod (Suma (X) (Cte 3)) (X) ) (Prod (Suma (X) (Cte (-11))) (X)) -- X*(3+X) + (-11 + X)*X = 3X + X^2 - 11X + X^2 = 2X^2 - 8X
+polinomio1 = Suma (Prod (Suma X (Cte 3)) X ) (Prod (Suma X (Cte (-11))) X) -- X*(3+X) + (-11 + X)*X = 3X + X^2 - 11X + X^2 = 2X^2 - 8X
 
 {-Ejercicio 12-}
 {-Considerar el siguiente tipo, que representa a los árboles binarios:-}
-data AB a = Nil | Bin (AB a) a (AB a)
+data AB a = Nil | Bin (AB a) a (AB a) deriving Show
 {-a) Usando recursión explícita, definir los esquemas de recursión estructural (foldAB) y primitiva (recAB), y
 dar sus tipos.-}
 -- Nil:: AB a , Bin :: AB a -> a -> AB a -> AB a
 --(recSobreIzq -> raiz -> recSobreDer -> salida) -> salidaCasoBase -> Estructura -> salida
 foldAB :: (b -> a -> b -> b) -> b -> AB a -> b
-foldAB casoBin casoNil arbol = case arbol of 
+foldAB casoBin casoNil arbol = case arbol of
                                Bin i r d -> casoBin (rec i) r (rec d)
-                               Nil -> casoNil 
+                               Nil -> casoNil
                             where rec = foldAB casoBin casoNil
 --El orden en que declaré los parámetros en el tipo lo debo respetar al poner los parámetros en casoBin
-recrAB :: (b -> a -> b -> AB a -> AB a -> b) -> b -> AB a -> b 
-recrAB casoBin casoNil arbol = case arbol of 
+recrAB :: (b -> a -> b -> AB a -> AB a -> b) -> b -> AB a -> b
+recrAB casoBin casoNil arbol = case arbol of
                                 Nil -> casoNil
-                                Bin i r d -> casoBin (rec i) r (rec d) i d 
-                            where rec = recrAB casoBin casoNil 
+                                Bin i r d -> casoBin (rec i) r (rec d) i d
+                            where rec = recrAB casoBin casoNil
 {-b) Definir las funciones esNil, altura y cantNodos (para esNil puede utilizarse case en lugar de foldAB
 o recAB).-}
-esNil :: AB a -> Bool 
-esNil Nil = True
-esNil _ = False
-
+esNil :: AB a -> Bool
+esNil arbol = case arbol of
+            Nil -> True
+            _ -> False
 altura :: AB a -> Int
-altura = foldAB (\recIzq r recDer -> recIzq + 1 + recDer) 0
+altura = foldAB (\recIzq r recDer -> 1 + max recDer recIzq) 1
+
+cantNodos :: AB a -> Int
+cantNodos = foldAB (\recIzq r recDer -> recIzq + 1 + recDer) 0
+
 {-c) Definir la función mejorSegún :: (a -> a -> Bool) -> AB a -> a, análoga a la del ejercicio 3, para árboles.
 Se recomienda definir una función auxiliar para comparar la raíz con un posible resultado de la recursión
 para un árbol que puede o no ser Nil.-}
-
+mejorSegún :: (a -> a -> Bool) -> AB a -> a
+mejorSegún f Nil = error "No se puede obtener el mejor según ningún criterio en un arbol Nil"
+mejorSegún f (Bin i r d) = foldAB (\recIzq r recDer -> compararYDarMejor f recDer (compararYDarMejor f r recIzq)) r (Bin i r d)
+        where compararYDarMejor f a b = if f a b then a else b
 
 {-d) Definir la función esABB :: Ord a => AB a -> Bool que chequea si un árbol es un árbol binario de búsqueda.
 Recordar que, en un árbol binario de búsqueda, el valor de un nodo es mayor o igual que los valores que
 aparecen en el subárbol izquierdo y es estrictamente menor que los valores que aparecen en el subárbol
 derecho-}
+esABB :: Ord a => AB a -> Bool
+esABB = recrAB (\esABBIzq r esABBDer i d -> esABBIzq && esABBDer && (esNil i || raiz i <= r) && (esNil d || raiz d > r)) True
+    where raiz (Bin _ r _) = r
 
 {-e) Justificar la elección de los esquemas de recursión utilizados para los tres puntos anteriores-}
+{-
+altura: Sólo necesitamos el dato de la recursión sobre las subestructuras -> recursión estructural
+cantNodos: También, ya que nos basta saber la cantidad de nodos de los subárboles para obtener la del árbol entero, solo usamos recursión estructural
+mejorSegún: Queremos comparar los mejores de los subárboles con la raíz, según el criterio dado. Por lo que nos basta con recursión estructural
+esABB: Necesitamos acceder a las raíces de los subárboles sin la recursión para poder compararlas con la raíz del árbol entero y así determinar si se cumple la condición de ABB. 
+    Entonces usamos recursión primitiva.
+-}
+
+{-Ejercicio 13-}
+{-Dado el tipo AB a del ejercicio 12:
+1) Definir las funciones ramas (caminos desde la raíz hasta las hojas), cantHojas y espejo.-}
+ramas :: AB a -> [[a]]
+ramas = recrAB (\ramasIzq r ramasDer i d -> f r i ramasIzq ++ f r d ramasDer) []
+                where raiz Nil = []
+                      raiz (Bin _ r _) = [r]
+
+f :: a -> AB a -> [[a]] ->[[a]]
+f r i xs |esNil i   = []
+         |null xs   = [r:raiz i]
+         |otherwise = (r:raiz i) : xs
+         where raiz Nil = []
+               raiz (Bin _ r _) = [r]
+caminosDeRaizHastaHojas :: AB a -> [[a]]
+caminosDeRaizHastaHojas = foldAB agregarACaminos []
+                        where agregarACaminos xss r yss |null xss && null yss = [[r]]
+                                                        |null xss             = map (r:) yss
+                                                        |null yss             = map (r:) xss
+                                                        |otherwise            = map (r:) (xss ++ yss)
+
+
+espejo :: AB a -> AB a
+espejo = foldAB (\recIzq r recDer -> Bin recDer r recIzq) Nil
+
+--    2
+--   / \
+--  1   3
+--  |\  |\
+--  4 5 8 7
+--         \
+--         11
+-- ramas de los subarboles de 2: [[1,4],[3,8],[1,5],[3,7]]
+arb1 = Bin (Bin (Bin Nil 4 Nil) 1 (Bin Nil 5 Nil)) 2 (Bin (Bin Nil 8 Nil) 3 (Bin Nil 7 (Bin Nil 11 Nil)))
+arb2 = Bin (Bin (Bin Nil 'c' Nil) 'a' (Bin Nil 'b' Nil)) 'd' (Bin (Bin Nil 'e' Nil) 'f' (Bin Nil 'g' (Bin Nil 'l' Nil)))
+
+{-2) Definir la función mismaEstructura :: AB a -> AB b -> Bool que, dados dos árboles, indica si éstos
+tienen la misma forma, independientemente del contenido de sus nodos. Pista: usar evaluación parcial y recordar el ejercicio 8-}
+mismaEstructuraExplicita :: AB a -> AB b -> Bool
+mismaEstructuraExplicita (Bin i r d)  (Bin l c ri) = mismaEstructuraExplicita i l && mismaEstructuraExplicita d ri
+mismaEstructuraExplicita Nil Nil = True
+mismaEstructuraExplicita Nil (Bin i r d) = False
+mismaEstructuraExplicita (Bin i r d) Nil = False
+--Le paso uno de los argumentos al otro lado
+mismaEstructuraExplicita2 :: AB a -> AB b -> Bool
+mismaEstructuraExplicita2 (Bin i r d) = \arbol -> if esNil arbol then False else mismaEstructuraExplicita2 i (hijoIzq arbol) && mismaEstructuraExplicita2 d (hijoDer arbol)
+                                        where hijoDer (Bin _ _ d) = d
+                                              hijoIzq (Bin i _ _) = i
+mismaEstructuraExplicita2 Nil = \arbol -> esNil arbol
+
+
+--Ahora reescribimos haciendo recursión sobre arbol Bin i r d
+mismaEstructura :: AB a -> AB b -> Bool
+mismaEstructura = foldAB (\recIzq r recDer arbol -> if esNil arbol then False else recIzq (hijoIzq arbol) && recDer (hijoDer arbol)) esNil
+                where hijoDer (Bin _ _ d) = d
+                      hijoIzq (Bin i _ _) = i
+
+
+
+{-
+    2                    a
+   / \                  / \
+  1   3                b   c
+  |\  |\              / | / \
+  4 5 8 7            d  e f  g
+         \                    \
+         11                    h
+
+
+
+-}
+
 {-foldr :: (a -> b -> b) -> b -> [a] -> b
 si la lambda es (\x rec ys -> ...) x::a , rec ys :: b por lo que rec :: b -> b y ys :: b -}
+
+{-Ejercicio 14-}
+{-Se desea modelar en Haskell los árboles con información en las hojas (y sólo en ellas). Para esto introduciremos
+el siguiente tipo:-}
+data AIH a = Hoja a | Binn (AIH a) (AIH a) deriving Show
+{-a) Definir el esquema de recursión estructural foldAIH y dar su tipo. Por tratarse del primer esquema de
+recursión que tenemos para este tipo, se permite usar recursión explícita.
+Hoja :: a -> AIH a
+Bin :: AIH a -> AIH a -> AIH a
+Reemplazamos los AIH a por b-}
+foldAIH :: (b -> b -> b) -> (a -> b) -> AIH a -> b
+foldAIH casoRec casoHoja arbol = case arbol of
+                                Hoja k -> casoHoja k
+                                Binn i d -> casoRec (rec i) (rec d)
+                                where rec = foldAIH casoRec casoHoja
+{-b) Escribir las funciones altura :: AIH a -> Integer y tamaño :: AIH a -> Integer.
+Considerar que la altura de una hoja es 1 y el tamaño de un AIH es su cantidad de hojas.-}
+
+alturaAIH :: AIH a -> Integer
+alturaAIH = foldAIH (\recI recD -> 1 + max recI recD) (const 1)
+
+tamaño :: AIH a -> Integer
+tamaño = foldAIH (+) (const 1)
+
+
+arbAIH = Binn (Binn (Hoja 4) (Hoja 5)) (Binn (Hoja 8) (Binn (Hoja 7) (Hoja 11)))
+{-  _____
+   /\   /\
+  4  5 8  |
+         / \
+        7  11
+-}
+
+{-Ejercicio 15-}
+{-Definir el tipo RoseTree de árboles no vacíos, con una cantidad indeterminada de hijos para cada nodo.-}
+data Rose a = Node a [Rose a]
+-- Node :: a -> [Rose a] -> Rose a
+{-2) Escribir el esquema de recursión estructural para RoseTree. Importante escribir primero su tipo.-}
+foldRose :: (a -> [b] -> b) -> Rose a -> b
+foldRose  f (Node a hijos) = f a (map (foldRose f) hijos) --Como tiene hijos en lista quiero hacer foldRose en cada uno por eso map
+{- foldr :: (a -> b -> b) -> b -> [a] -> b
+   foldr _ z []     = z
+   foldr f z (x:xs) = f x (foldr f z xs)       vemos como aplica f al primer elemento y hace recursión consigo misma y baseCase sobre cola, lo mismo debe hacer foldRose
+nombreFold funcion baseCase estructura pattern matching constructores = funcion primerElem (nombreFold funcion baseCase subestructura-}
+
+{-3) Usando el esquema definido, escribir las siguientes funciones:
+    a) hojas, que dado un RoseTree, devuelva una lista con sus hojas ordenadas de izquierda a derecha,
+        según su aparición en el RoseTree.
+    b) distancias, que dado un RoseTree, devuelva las distancias de su raíz a cada una de sus hojas.
+    c) altura, que devuelve la altura de un RoseTree (la cantidad de nodos de la rama más larga). Si el
+        RoseTree es una hoja, se considera que su altura es 1.-}
+hojasRose :: Rose a -> [a]
+hojasRose = foldRose (\nodo listaConLasListasDeRecSobreHijos -> nodo: concat listaConLasListasDeRecSobreHijos)
+
+distancias :: Rose a -> [Int]
+distancias = foldRose (\nodo listaConLasListasDeDistanciasDeSusHijos -> if null listaConLasListasDeDistanciasDeSusHijos then [0] else map (1+) (concat listaConLasListasDeDistanciasDeSusHijos))
+
+alturaRose :: Rose a -> Int
+alturaRose = foldRose (\nodo listaConListaDeAlturasDeSusHijos -> if null listaConListaDeAlturasDeSusHijos then 1 else 1 + maximum listaConListaDeAlturasDeSusHijos)
+--OBS CLAVE: rec de la lambda en foldRose es del tipo [b] por lo tanto siempre es lista de tipo retorno, en base a eso veo si usa concat o no
+
+rosetree = (Node 3 [Node 1 [Node 2 [], Node 4 [Node 5 []]], Node 7 [Node 23 [], Node 21 []]])
+
+instance Show a => Show (Rose a) where
+    show = showRoseTree 0
+      where
+        showRoseTree :: Show a => Int -> Rose a -> String
+        showRoseTree indent (Node value children) =
+            replicate indent ' ' ++ show value ++ "\n" ++
+            concatMap (showRoseTree (indent + 2)) children
+
+-- Árbol vacío
+emptyTree :: AB a
+emptyTree = Nil
+
+-- Árbol con un solo nodo
+singleNodeTree :: AB Int
+singleNodeTree = Bin Nil 1 Nil
+
+-- Árbol binario simple
+simpleTree :: AB Int
+simpleTree = Bin (Bin Nil 2 Nil) 1 (Bin Nil 3 Nil)
+
+-- Árbol desequilibrado a la izquierda
+leftHeavyTree :: AB Char
+leftHeavyTree = Bin (Bin (Bin Nil 'a' Nil) 'b' Nil) 'c' Nil
+
+-- Árbol desequilibrado a la derecha
+rightHeavyTree :: AB String
+rightHeavyTree = Bin Nil "root" (Bin Nil "right" (Bin Nil "rightmost" Nil))
+
+-- Árbol completo de profundidad 3
+completeTree :: AB Int
+completeTree = Bin
+                 (Bin (Bin Nil 1 Nil) 2 (Bin Nil 3 Nil))
+                 4
+                 (Bin (Bin Nil 5 Nil) 6 (Bin Nil 7 Nil))
+
+-- Árbol con diferentes tipos de datos
+mixedTypeTree :: AB (Either Int String)
+mixedTypeTree = Bin
+                  (Bin Nil (Left 1) Nil)
+                  (Right "root")
+                  (Bin Nil (Left 2) (Bin Nil (Right "leaf") Nil))
+{-Ejercicio 16 (Opcional) -}
+{- Se desea representar conjuntos mediante Hashing abierto (chain addressing). El Hashing abierto consta de
+dos funciones: una función de Hash, que dado un elemento devuelve un valor entero (el cual se espera que no se
+repita con frecuencia), y una tabla de Hash, que dado un número entero devuelve los elementos del conjunto a
+los que la función de Hash asignó dicho número (es decir, la preimagen de la función de Hash para ese número).
+Los representaremos en Haskell de la siguiente manera:-}
+data HashSet a = Hash (a -> Integer) (Integer -> [a])
+{-Por contexto de uso, vamos a suponer que la tabla de Hash es una función total, que devuelve listas vacías
+para los números que no corresponden a elementos del conjunto. Este es un invariante que deberá preservarse
+en todas las funciones que devuelvan conjuntos.
+Definir las siguientes funciones:-}
+{-1) vacío :: (a -> Integer) -> HashSet a, que devuelve un conjunto vacío con la función de Hash indicada.-}
+vacío :: (a -> Integer) -> HashSet a
+vacío f = Hash f (const [])
+
+{-2) pertenece :: Eq a => a -> HashSet a -> Bool, que indica si un elemento pertenece a un conjunto. Es 
+decir, si se encuentra en la lista obtenida en la tabla de Hash para el número correspondiente a la función
+de Hash del elemento.
+Por ejemplo:
+pertenece 5 $ agregar 1 $ agregar 2 $ agregar 1 $ vacío (flip mod 5) devuelveFalse.
+pertenece 2 $ agregar 1 $ agregar 2 $ agregar 1 $ vacío (flip mod 5) devuelveTrue.-}
+pertenece :: Eq a => a -> HashSet a -> Bool
+pertenece e (Hash funcionHash tablaHash) = e `elem` tablaHash (funcionHash e)
+--funcionHash e genera la clave. tablaHash con la clave retorna lista de elementos del conjunto
+
+
+{-3) agregar :: Eq a => a -> HashSet a -> HashSet a, que agrega un elemento a un conjunto. Si el elemento ya estaba en el conjunto, se debe devolver el conjunto sin modificaciones.-}
+agregar :: Eq a => a -> HashSet a -> HashSet a
+agregar a (Hash funcionHash tablaHash) = if a `elem` tablaHash (funcionHash a) then Hash funcionHash tablaHash else Hash funcionHash (\x -> a:tablaHash(funcionHash a))
+--pertenece 71(agregar 71(agregar 23(agregar 2(agregar 5 (vacío (flip mod 5))))))
+
+
+{-4) intersección :: Eq a => HashSet a -> HashSet a -> HashSet a que, dados dos conjuntos, devuelve un conjunto con la misma función de Hash del primero y con los elementos que pertenecen a ambos
+conjuntos a la vez.-}
+intersección :: Eq a => HashSet a -> HashSet a -> HashSet a
+
+
+{-5) foldr1(no relacionada con los conjuntos). Dar el tip o y definir la función foldr1 para listas sin usar
+recursión explícita, recurriendo a alguno de los esquemas de recursión conocidos.
+Se recomienda usar la función error :: String -> a para el caso de la lista vacía.-}
