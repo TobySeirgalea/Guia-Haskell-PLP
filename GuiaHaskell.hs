@@ -95,7 +95,7 @@ todosIguales [] = True
 todosIguales [_] = True
 todosIguales (x:y:ys) = x == y && todosIguales (y:ys)
 
-data AB'' a = Nil' | Bin' (AB'' a) a (AB'' a) deriving Show
+data AB'' a = Nil' | Bin' (AB'' a) a (AB'' a) --deriving Show
 
 --Indica si un árbol es vacío (i.e. no tiene nodos).
 vacioAB :: AB a -> Bool
@@ -547,7 +547,7 @@ polinomio1 = Suma (Prod (Suma X (Cte 3)) X ) (Prod (Suma X (Cte (-11))) X) -- X*
 
 {-Ejercicio 12-}
 {-Considerar el siguiente tipo, que representa a los árboles binarios:-}
-data AB a = Nil | Bin (AB a) a (AB a) deriving Show
+data AB a = Nil | Bin (AB a) a (AB a) --deriving Show
 {-a) Usando recursión explícita, definir los esquemas de recursión estructural (foldAB) y primitiva (recAB), y
 dar sus tipos.-}
 -- Nil:: AB a , Bin :: AB a -> a -> AB a -> AB a
@@ -678,7 +678,7 @@ si la lambda es (\x rec ys -> ...) x::a , rec ys :: b por lo que rec :: b -> b y
 {-Ejercicio 14-}
 {-Se desea modelar en Haskell los árboles con información en las hojas (y sólo en ellas). Para esto introduciremos
 el siguiente tipo:-}
-data AIH a = Hoja a | Binn (AIH a) (AIH a) deriving Show
+data AIH a = Hoja a | Binn (AIH a) (AIH a) --deriving Show
 {-a) Definir el esquema de recursión estructural foldAIH y dar su tipo. Por tratarse del primer esquema de
 recursión que tenemos para este tipo, se permite usar recursión explícita.
 Hoja :: a -> AIH a
@@ -737,13 +737,13 @@ alturaRose = foldRose (\nodo listaConListaDeAlturasDeSusHijos -> if null listaCo
 
 rosetree = (Node 3 [Node 1 [Node 2 [], Node 4 [Node 5 []]], Node 7 [Node 23 [], Node 21 []]])
 
-instance Show a => Show (Rose a) where
-    show = showRoseTree 0
-      where
-        showRoseTree :: Show a => Int -> Rose a -> String
-        showRoseTree indent (Node value children) =
-            replicate indent ' ' ++ show value ++ "\n" ++
-            concatMap (showRoseTree (indent + 2)) children
+-- instance Show a => Show (Rose a) where
+--     show = showRoseTree 0
+--       where
+--         showRoseTree :: Show a => Int -> Rose a -> String
+--         showRoseTree indent (Node value children) =
+--             replicate indent ' ' ++ show value ++ "\n" ++
+--             concatMap (showRoseTree (indent + 2)) children
 
 -- Árbol vacío
 emptyTree :: AB a
@@ -784,7 +784,8 @@ dos funciones: una función de Hash, que dado un elemento devuelve un valor ente
 repita con frecuencia), y una tabla de Hash, que dado un número entero devuelve los elementos del conjunto a
 los que la función de Hash asignó dicho número (es decir, la preimagen de la función de Hash para ese número).
 Los representaremos en Haskell de la siguiente manera:-}
-data HashSet a = Hash (a -> Integer) (Integer -> [a])
+data HashSet a = Hash (a -> Integer) (Integer -> [a]) 
+
 {-Por contexto de uso, vamos a suponer que la tabla de Hash es una función total, que devuelve listas vacías
 para los números que no corresponden a elementos del conjunto. Este es un invariante que deberá preservarse
 en todas las funciones que devuelvan conjuntos.
@@ -801,19 +802,29 @@ pertenece 5 $ agregar 1 $ agregar 2 $ agregar 1 $ vacío (flip mod 5) devuelveFa
 pertenece 2 $ agregar 1 $ agregar 2 $ agregar 1 $ vacío (flip mod 5) devuelveTrue.-}
 pertenece :: Eq a => a -> HashSet a -> Bool
 pertenece e (Hash funcionHash tablaHash) = e `elem` tablaHash (funcionHash e)
---funcionHash e genera la clave. tablaHash con la clave retorna lista de elementos del conjunto
+--funcionHash e genera la clave. tablaHash con la clave retorna lista de elementos del conjunto con esa clave
 
 
 {-3) agregar :: Eq a => a -> HashSet a -> HashSet a, que agrega un elemento a un conjunto. Si el elemento ya estaba en el conjunto, se debe devolver el conjunto sin modificaciones.-}
 agregar :: Eq a => a -> HashSet a -> HashSet a
 agregar a (Hash funcionHash tablaHash) = if a `elem` tablaHash (funcionHash a) then Hash funcionHash tablaHash else Hash funcionHash (\x -> a:tablaHash(funcionHash a))
 --pertenece 71(agregar 71(agregar 23(agregar 2(agregar 5 (vacío (flip mod 5))))))
-
-
+hash = agregar 71(agregar 23(agregar 2(agregar 5 (vacío (flip mod 5)))))
+hash2 = agregar 1(agregar 28(agregar 2(agregar 6 (vacío (*5)))))
 {-4) intersección :: Eq a => HashSet a -> HashSet a -> HashSet a que, dados dos conjuntos, devuelve un conjunto con la misma función de Hash del primero y con los elementos que pertenecen a ambos
 conjuntos a la vez.-}
 intersección :: Eq a => HashSet a -> HashSet a -> HashSet a
+intersección (Hash funcionHash1 tablaHash1) (Hash funcionHash2 tablaHash2) = 
+    Hash funcionHash1 (\n -> if tablaHash2 )
+--dados dos hashsets con la misma funcion de hash si n está en uno y en otro -> Está en intersección
+--si a un hashset le cambio la funcion de hash pero dejo su tabla, 
+--fhash dado un elemento -> indice en tabla de elementos con esa clave
+--cuando agregué elementos antes de cambiarle la hash iban a otros indices de tabla. Ahora que la cambié no puedo saber si ese elemento consultado con la nueva esta en tabla.
+---Que garantiza que si cambio funcion de hash pueda acceder a los mismo elementos?
+--Se agrega elemento en pos que dice fhash
 
+--t debe ser :: Integer -> [a] y retornar lista con los que estaban en tablaHash1 y 2
+--t recibe un numero que es una clave, para ver si hay uno en tabla1 hacemos clave tabla1 
 
 {-5) foldr1(no relacionada con los conjuntos). Dar el tip o y definir la función foldr1 para listas sin usar
 recursión explícita, recurriendo a alguno de los esquemas de recursión conocidos.
