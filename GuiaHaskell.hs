@@ -200,8 +200,14 @@ elem' elemento = foldr (\x rec -> x == elemento || rec) False
 filter' :: (a -> Bool) -> [a] -> [a]
 filter' f = foldr (\x rec -> if f x then x:rec else rec) []
 
+filterFoldl :: (a -> Bool) -> [a] -> [a]
+filterFoldl p = foldl (\ac x -> if p x then ac ++ [x] else ac) []
+
 map' :: (a -> b) -> [a] -> [b]
-map' = map
+map' f = foldr ((:) . f) []
+
+mapFoldl :: (a -> b) -> [a] -> [b]
+mapFoldl f = foldl (\ac x -> ac ++ [f x]) []
 
 {-Definir la función mejorSegún :: (a -> a -> Bool) -> [a] -> a, que devuelve el máximo elemento
 de la lista según una función de comparación, utilizando foldr1. Por ejemplo, maximum = mejorSegún (>).-}
@@ -490,7 +496,7 @@ insertarEnCadaColumna = recr (\x xs rec yss -> if (not.null) yss then (x: head y
 --OBS! como en recursión explícita usamos un patrón para yss == [], acá en el fold debemos agregarlo con if then else
 --Si no hay más columnas debo hacer que los elementos de la fila que quiero poner se conviertan en columnas para que sea el caso base. Eso lo hace insertar como cols    
 insertarComoCols :: [Int] -> [[Int]]
-insertarComoCols = map ((: []))
+insertarComoCols = map (: [])
 
 {-Ejercicio 10-}
 {-a) Definir y dar el tipo del esquema de recursión foldNat sobre los naturales. Utilizar el tipo Integer de
@@ -591,6 +597,27 @@ esABB :: Ord a => AB a -> Bool
 esABB = recrAB (\esABBIzq r esABBDer i d -> esABBIzq && esABBDer && (esNil i || raiz i <= r) && (esNil d || raiz d > r)) True
     where raiz (Bin _ r _) = r
 
+busquedaEnABB :: (Ord a) => AB a -> a -> a
+busquedaEnABB = foldAB (\recIzq r recDer elem -> if r == elem then r else (if elem < r then (recIzq elem) else (recDer elem))) (error "No lo encontré")
+
+busquedaEnABB2 :: (Ord a) => a ->  AB a -> Bool
+busquedaEnABB2 elem = foldAB (\recIzq r recDer -> if elem == r then True else (if elem < r then recIzq else recDer)) (False)
+
+elementosInorder :: AB a -> [a]
+elementosInorder = foldAB (\recIzq r recDer -> recIzq ++ [r] ++ recDer) ([])
+
+todasRaicesMayoresQueSubarboles :: (Ord a) => AB a -> Bool
+todasRaicesMayoresQueSubarboles (Bin i r d) = recrAB(\recIzq r recDer i d -> (esNil i || r > (raiz i)) && (esNil d || r > (raiz d)) && recIzq && recDer) True (Bin i r d)
+    where raiz (Bin _ r _) = r
+          
+
+
+esABB2 :: (Ord a) => AB a -> Bool
+esABB2     Nil     = False
+esABB2 (Bin i r d) = recrAB (\reci root recd izq der -> (raiz izq) <= root && (raiz der) > root && reci && recd) True (Bin i r d)
+    where raiz (Bin _ r _) = r
+
+
 {-e) Justificar la elección de los esquemas de recursión utilizados para los tres puntos anteriores-}
 {-
 altura: Sólo necesitamos el dato de la recursión sobre las subestructuras -> recursión estructural
@@ -625,6 +652,21 @@ caminosDeRaizHastaHojas = foldAB agregarACaminos []
 espejo :: AB a -> AB a
 espejo = foldAB (\recIzq r recDer -> Bin recDer r recIzq) Nil
 
+esEspejo :: (Eq a) => AB a -> AB a -> Bool
+esEspejo Nil (Bin _ _ _) = False
+esEspejo (Bin _ _ _) Nil = False
+esEspejo Nil Nil         = True
+esEspejo (Bin i1 r1 d1) (Bin i2 r2 d2) = foldAB (\reci r recd otroArbol -> r == raiz otroArbol && reci (der otroArbol) && recd (izq otroArbol)) (const True) (Bin i1 r1 d1) (Bin i2 r2 d2)
+    where izq (Bin i _ _) = i
+          der (Bin _ _ d) = d
+          raiz (Bin _ r _) = r
+
+esEspejo2 :: (Eq a) => AB a -> AB a -> Bool
+esEspejo2 Nil = \arbol -> if esNil arbol then True else False
+esEspejo2 (Bin i1 r1 d1) = foldAB (\reci r recd otroArbol -> r == raiz otroArbol && reci (der otroArbol) && recd (izq otroArbol)) (const True) (Bin i1 r1 d1) 
+    where izq (Bin i _ _) = i
+          der (Bin _ _ d) = d
+          raiz (Bin _ r _) = r
 --    2
 --   / \
 --  1   3
@@ -645,19 +687,17 @@ mismaEstructuraExplicita Nil (Bin i r d) = False
 mismaEstructuraExplicita (Bin i r d) Nil = False
 --Le paso uno de los argumentos al otro lado
 mismaEstructuraExplicita2 :: AB a -> AB b -> Bool
-mismaEstructuraExplicita2 (Bin i r d) = \arbol -> if esNil arbol then False else mismaEstructuraExplicita2 i (hijoIzq arbol) && mismaEstructuraExplicita2 d (hijoDer arbol)
+mismaEstructuraExplicita2 (Bin i r d) = \arbol -> not (esNil arbol) && (mismaEstructuraExplicita2 i (hijoIzq arbol) && mismaEstructuraExplicita2 d (hijoDer arbol))
                                         where hijoDer (Bin _ _ d) = d
                                               hijoIzq (Bin i _ _) = i
-mismaEstructuraExplicita2 Nil = \arbol -> esNil arbol
+mismaEstructuraExplicita2 Nil = esNil
 
 
 --Ahora reescribimos haciendo recursión sobre arbol Bin i r d
 mismaEstructura :: AB a -> AB b -> Bool
-mismaEstructura = foldAB (\recIzq r recDer arbol -> if esNil arbol then False else recIzq (hijoIzq arbol) && recDer (hijoDer arbol)) esNil
+mismaEstructura = foldAB (\recIzq r recDer arbol -> not (esNil arbol) && (recIzq (hijoIzq arbol) && recDer (hijoDer arbol))) esNil
                 where hijoDer (Bin _ _ d) = d
                       hijoIzq (Bin i _ _) = i
-
-
 
 {-
     2                    a
@@ -667,8 +707,6 @@ mismaEstructura = foldAB (\recIzq r recDer arbol -> if esNil arbol then False el
   4 5 8 7            d  e f  g
          \                    \
          11                    h
-
-
 
 -}
 
@@ -735,7 +773,7 @@ alturaRose :: Rose a -> Int
 alturaRose = foldRose (\nodo listaConListaDeAlturasDeSusHijos -> if null listaConListaDeAlturasDeSusHijos then 1 else 1 + maximum listaConListaDeAlturasDeSusHijos)
 --OBS CLAVE: rec de la lambda en foldRose es del tipo [b] por lo tanto siempre es lista de tipo retorno, en base a eso veo si usa concat o no
 
-rosetree = (Node 3 [Node 1 [Node 2 [], Node 4 [Node 5 []]], Node 7 [Node 23 [], Node 21 []]])
+rosetree = Node 3 [Node 1 [Node 2 [], Node 4 [Node 5 []]], Node 7 [Node 23 [], Node 21 []]]
 
 -- instance Show a => Show (Rose a) where
 --     show = showRoseTree 0
@@ -784,7 +822,7 @@ dos funciones: una función de Hash, que dado un elemento devuelve un valor ente
 repita con frecuencia), y una tabla de Hash, que dado un número entero devuelve los elementos del conjunto a
 los que la función de Hash asignó dicho número (es decir, la preimagen de la función de Hash para ese número).
 Los representaremos en Haskell de la siguiente manera:-}
-data HashSet a = Hash (a -> Integer) (Integer -> [a]) 
+data HashSet a = Hash (a -> Integer) (Integer -> [a])
 
 {-Por contexto de uso, vamos a suponer que la tabla de Hash es una función total, que devuelve listas vacías
 para los números que no corresponden a elementos del conjunto. Este es un invariante que deberá preservarse
@@ -807,24 +845,14 @@ pertenece e (Hash funcionHash tablaHash) = e `elem` tablaHash (funcionHash e)
 
 {-3) agregar :: Eq a => a -> HashSet a -> HashSet a, que agrega un elemento a un conjunto. Si el elemento ya estaba en el conjunto, se debe devolver el conjunto sin modificaciones.-}
 agregar :: Eq a => a -> HashSet a -> HashSet a
-agregar a (Hash funcionHash tablaHash) = if a `elem` tablaHash (funcionHash a) then Hash funcionHash tablaHash else Hash funcionHash (\x -> a:tablaHash(funcionHash a))
+agregar a (Hash funcionHash tablaHash) = if a `elem` tablaHash (funcionHash a) then Hash funcionHash tablaHash else Hash funcionHash (\x -> a:tablaHash (funcionHash a))
 --pertenece 71(agregar 71(agregar 23(agregar 2(agregar 5 (vacío (flip mod 5))))))
-hash = agregar 71(agregar 23(agregar 2(agregar 5 (vacío (flip mod 5)))))
-hash2 = agregar 1(agregar 28(agregar 2(agregar 6 (vacío (*5)))))
+hash = agregar 71 (agregar 23 (agregar 2 (agregar 5 (vacío (`mod` 5)))))
+hash2 = agregar 1 (agregar 28 (agregar 2 (agregar 6 (vacío (*5)))))
 {-4) intersección :: Eq a => HashSet a -> HashSet a -> HashSet a que, dados dos conjuntos, devuelve un conjunto con la misma función de Hash del primero y con los elementos que pertenecen a ambos
 conjuntos a la vez.-}
--- intersección :: Eq a => HashSet a -> HashSet a -> HashSet a
--- intersección (Hash funcionHash1 tablaHash1) (Hash funcionHash2 tablaHash2) = Hash funcionHash1 (\clave -> if (clave `elem` tablaHash1 (funcionHash1 clave)) && (clave `elem` tablaHash2 (funcionHash2 clave)) then [clave] else []) 
---dados dos hashsets con la misma funcion de hash si n está en uno y en otro -> Está en intersección
---si a un hashset le cambio la funcion de hash pero dejo su tabla, 
---fhash dado un elemento -> indice en tabla de elementos con esa clave
---cuando agregué elementos antes de cambiarle la hash iban a otros indices de tabla. Ahora que la cambié no puedo saber si ese elemento consultado con la nueva esta en tabla.
----Que garantiza que si cambio funcion de hash pueda acceder a los mismo elementos?
---Se agrega elemento en pos que dice fhash
-
---t debe ser :: Integer -> [a] y retornar lista con los que estaban en tablaHash1 y 2
---t recibe un numero que es una clave, para ver si hay uno en tabla1 hacemos clave tabla1 
-
+intersección :: Eq a => HashSet a -> HashSet a -> HashSet a
+intersección (Hash f t) e = Hash f (filter (`pertenece` e).t)
 {-5) foldr1(no relacionada con los conjuntos). Dar el tipo y definir la función foldr1 para listas sin usar
 recursión explícita, recurriendo a alguno de los esquemas de recursión conocidos.
 Se recomienda usar la función error :: String -> a para el caso de la lista vacía.-}
@@ -859,7 +887,7 @@ pitagoricasBien :: [(Integer, Integer, Integer)]
 pitagoricasBien = [(a, b, c) | s <- [1..], a <- [1..s], b <- [1..s-a], c <- [1..s-a-b], a^2 + b^2 == c^2]
 
 testPitagoricas :: [(Integer, Integer, Integer)] -> Bool
-testPitagoricas = foldr (\x rec -> ((fst x)^2 + (snd x)^2 == (thrd x)^2) && rec) True
+testPitagoricas = foldr (\x rec -> (fst x)^2 + (snd x)^2 == (thrd x)^2 && rec) True
                     where thrd (_,_,a) = a
                           snd (_,a,_)  = a
                           fst (a,_,_)  = a
@@ -870,11 +898,11 @@ usar recursión explícita. Pensar por qué la recursón utilizada no es estruct
 generación infinita, pero puede ser útil para otras funciones que generen listas infinitas de listas).-}
 listasQueSuman :: Int -> [[Int]]
 listasQueSuman 0 = []
-listasQueSuman n = [xs | xs <- listasQueSumanNDeLongitd n n]
+listasQueSuman n = listasQueSumanNDeLongitd n n
 
 listasQueSumanNDeLongitd :: Int -> Int -> [[Int]]
 listasQueSumanNDeLongitd 0 0 = [[]]
-listasQueSumanNDeLongitd l n = [x:xs | x <- [1..n], xs <- listasQueSumanNDeLongitd (l-1) (n-x)] 
+listasQueSumanNDeLongitd l n = [x:xs | x <- [1..n], xs <- listasQueSumanNDeLongitd (l-1) (n-x)]
 
 testListasQueSumanN :: Int -> [[Int]] -> Bool
 testListasQueSumanN n = foldr (\x rec -> sum x == n && rec) True
@@ -889,10 +917,165 @@ listasDeEnteros = [x:xs | s <- [1..], x <- [1..s], xs <- listasQueSuman (s-x)]
 --Dado el tipo de datos AIH a definido en el ejercicio 14:
 --a) Definir la lista (infinita) de todos los AIH cuyas hojas tienen tipo (). Se recomienda definir una función auxiliar. Para este ejercicio se permite utilizar recursión explícita.
 --b) Explicar por qué la recursión utilizada en el punto a) no es estructural.
---El tipo (), usualmente conocido como unit, tiene un único valor, denotado como ().
+--El tipo (), usualmente conocido comoubt,ctiene un únio valor, bnctado como ().
 listaInfAIH :: [AIH ()]
 listaInfAIH = []
 
-listaAIHConNnodos :: AIH () -> [AIH ()]
-listaAIHConNnodos 1  Hoja _ = []
-listaAIHConNnodos n ()= 
+-- listaAIHConNnodos :: AIH () -> [AIH ()]
+-- listaAIHConNnodos 1  Hoja _ = []
+-- listaAIHConNnodos n ()= 
+
+{-foldAT :: 
+Constructores y sus tipos:
+Nil :: AT a
+Tern :: a -> AT a -> AT a -> AT a -> AT a
+Entonces el tipo del foldAT será (funcionCasoTern) -> CasoNil -> AT a -> b
+-- -}
+-- foldAT :: (a -> b -> b -> b -> b) -> b -> AT a -> b
+-- foldAT casoTern casoNil arbol = case arbol of
+--                                 Nil -> casoNil
+--                                 Tern raiz hijo1 hijo2 hijo3 -> casoTern raiz (rec hijo1) (rec hijo2) (rec hijo3)
+--                                 where rec = foldAT casoTern casoNil
+{-foldRose :: 
+Rose :: a -> [Rose] -> RoseTree a
+-}
+-- foldRose :: (a -> [b] -> b) -> RoseTree a -> b
+-- foldRose funcion (Rose a hijos) = funcion a (map (foldRose funcion) hijos)
+
+{-
+TrieNodo :: (Maybe a) -> [(Char, Trie a)] -> Trie a
+-}
+-- foldTrie :: (Maybe a -> [(Char, b)] -> b) -> Trie a -> b
+-- foldTrie f (TrieNodo a xs) = f a (mapSndTupla (foldTrie f) xs)
+
+-- mapSndTupla :: (b -> c) -> [(d, b)] -> [(d, c)]
+-- mapSndTupla f = map (\x -> (fst x, f.snd $ x ))
+
+{-Funciones de prueba sobre Tries usando foldTrie para testear funcionamiento -}
+-- countNodesTrie :: Trie a -> Int --Es equivalente a contar cantidad de letras en conjunto
+-- countNodesTrie = foldTrie (\_ listaTuplasConResRec -> 1 + if null listaTuplasConResRec then 0 else foldSum listaTuplasConResRec)
+--   where foldSum = foldr (\(char, sum) rec -> sum + rec) 0
+
+-- alturaTrie :: Trie a -> Int --Es equivalente a palabra más larga del conjunto
+-- alturaTrie = foldTrie (\_ listaTuplasConRecursion -> 1 + if null listaTuplasConRecursion then 0 else foldAltura listaTuplasConRecursion)
+--   where foldAltura :: [(Char, Int)] -> Int
+        -- foldAltura = foldr (\(char, alturas) rec -> max alturas rec) 0
+
+-- alturaRose :: RoseTree a -> Int 
+-- alturaRose = foldRose (\raiz listaAlturasHijos -> 1 + if null listaAlturasHijos then 0 else maximum listaAlturasHijos)
+
+-- cantidadNodosRose :: RoseTree a -> Int
+-- cantidadNodosRose = foldRose (\raiz listaCantidadNodosHijos -> 1 + sum listaCantidadNodosHijos)
+
+-- alturaAT :: AT a -> Int
+-- alturaAT = foldAT (\raiz ls ms rs -> 1 + max rs (max ls ms)) 0
+
+-- cantidadNodosTern :: AT a -> Int 
+-- cantidadNodosTern = foldAT (\raiz ls ms rs -> 1 + ls + ms + rs) 0
+
+--Ejercicios final
+
+--Final 19/11/23
+{-implementar zipWith :: (a -> b -> c) -> [a] -> [b] -> [c] que toma una función que combina un elemento de la primer lista con uno de la segunda lista (posición por posición no producto cartesiano) usando foldr
+-}
+
+zipWith' :: (a -> b -> c) -> [a] -> [b] -> [c]
+zipWith' f = foldr (\x rec ys -> (f x (head ys)) : (rec (tail ys))) (const [])
+
+recrConFoldr :: (a -> [a] -> b -> b) -> b -> [a] -> b
+recrConFoldr f base xs = fst (foldr (\x (rec, lista) -> (f x lista rec, x:lista)) (base, []) xs)
+
+foldrConRecr :: (a -> b -> b) -> b -> [a] -> b
+-- foldrConRecr f = recrConFoldr (\x xs rec -> f x rec) 
+-- foldrConRecr f = recrConFoldr (\x xs rec -> f (const x xs) rec)
+foldrConRecr f = recrConFoldr (const.f)
+
+--Final 14/12/23
+{-Te dice que hay un tipo de datos recurisvo: D a Tal que foldD::(a - >b - >) -> D a -> b También te dice que tensa un elemento unD:: D Int Y te da: foldD (+) unD Decir si es verdadero o falso que: la expresión tipa pero independientemente de como se defina unD, nunca termina.-}
+
+{- supongo que quiso decir foldD::(a -> b -> b) -> D a -> b
+
+(+) :: (Int -> Int -> Int)
+Entonces en foldD (+), a = Int, b = Int
+foldD (+) :: D Int -> Int, así que si le paso unD :: D Int tipa
+¿Termina? Si unD tiene un constructor recursivo no podrá terminar porque no tiene caso base el foldD.
+-}
+
+
+{-L1 y L2 son listas infinitas. Sabemos que un elemento que buscamos esta en alguna de las dos listas. Como podría hacer una función que busque el elemento en ambas?-}
+
+buscarEnListasSimultaneo :: (Eq a) => [a] -> [a] -> a -> Bool 
+buscarEnListasSimultaneo = foldr (\x rec ys elem -> elem == x || head ys == elem || rec (tail ys) elem) (\_ _ -> False)
+
+{-Definir fix en Haskell-}
+-- Aprovechamos que Haskell es lazy, concretamente usa reducción call by need (que es como un call by name pero usando memoización a lo PD para no volver a reducir algo que ya se redujo antes)
+-- fix' (\rec n -> if n == 0 then 1 else n * rec (n-1)) 5
+fix' :: (a -> a) -> a 
+fix' v = v (fix' v)
+
+data A a b = C1 a | C2 b |C3 a (A a b)
+
+--En este caso como uso la misma f para C1 y C2 necesariamente sus dominios deben coincidir
+mapRaro :: A a a -> (a -> c) -> A c c
+mapRaro (C1 x) f   = C1 (f x)
+mapRaro (C2 y) f   = C2 (f y) 
+mapRaro (C3 x r) f = C3 (f x) (mapRaro r f)
+--Alternativa: Recibir dos funciones, una para cada caso
+mapRaro2 :: A a b -> (a -> c) -> (b -> d) -> A c d
+mapRaro2 (C1 x)   f g   = C1 (f x)
+mapRaro2 (C2 y)   _ g   = C2 (g y)
+mapRaro2 (C3 x r) f g   = C3 (f x) (mapRaro2 r f g)
+
+foldRaro :: (a -> d) -> (b -> d) -> (a -> d -> d) -> A a b -> d
+foldRaro caso1 caso2 caso3 estructuraRara = case estructuraRara of 
+    C1 x -> caso1 x
+    C2 y -> caso2 y
+    C3 x r -> caso3 x (rec r)
+    where rec = foldRaro caso1 caso2 caso3
+
+mapRaroConFold :: (a -> d) -> (b -> c) -> A a b -> A d c
+mapRaroConFold f g = foldRaro (C1 . f) (C2 . g) (\x rec -> C3 (f x) rec)
+
+{-Dada una lisa en orden decreciente hacer en Haskell una función que devuelva Nothing si tiene menos de dos elementos y Just (x,y) con (x,y) el par de elementos consecutivos con menor diferencia, en caso de emepate elegir cualquiera-}
+funcion :: [Int] -> Maybe (Int, Int)
+funcion (x:y:ys) = Just (g (x:y:ys))
+funcion _ = Nothing
+
+g :: [Int] -> (Int, Int) --Es importante antes chequar que no sea xs == [], pues sino da falla
+g = recr (\x xs rec -> if ((xs /= []) && (dif x (head xs)) < (dif (fst rec) (snd rec))) then (x, head xs) else rec) (0,9223372036854775807)
+    where dif x y = abs(x - y)
+
+data ArbolBinario a = Hoja1 a | Bin1 a (ArbolBinario a) (ArbolBinario a) deriving Show
+
+foldABin :: (a -> b) -> (a -> b -> b -> b) -> ArbolBinario a -> b
+foldABin casoHoja casoBin arbol = case arbol of 
+    Hoja1 a -> casoHoja a
+    Bin1 a r1 r2 -> casoBin a (rec r1) (rec r2)
+    where rec = foldABin casoHoja casoBin
+
+truncar10 :: ArbolBinario Int -> ArbolBinario Int
+truncar10 = foldABin (Hoja1) (\r recizq recder -> if (suma recizq) + (suma recder) + r < 10 then Hoja1((suma recizq) + (suma recder) + r) else (Bin1 r recizq recder))
+
+suma :: ArbolBinario Int -> Int
+suma = foldABin (id) (\r reci recd -> r + reci + recd)
+
+valorHoja :: ArbolBinario Int -> Int
+valorHoja (Hoja1 a) = a
+
+data Dato a b = C11 | C22 a | C33 b (Dato a b) (Dato a b)
+
+recDato :: d -> (a -> d) -> (b -> Dato a b -> Dato a b -> d -> d -> d) -> Dato a b -> d 
+recDato caso1 caso2 caso3 estr = case estr of 
+        C11 -> caso1
+        C22 x -> caso2 x
+        C33 y r1 r2 -> caso3 y r1 r2 (rec r1) (rec r2)
+        where rec = recDato caso1 caso2 caso3
+
+foldDato :: d -> (a -> d) -> (b -> d -> d -> d) -> Dato a b -> d
+foldDato base1 base2 recursivo = recDato base1 base2 (\y r1 r2 rec1 rec2 -> recursivo y rec1 rec2)
+
+split :: Dato a b -> ([a], [b])
+split = foldDato ([],[]) (\x -> ([x],[])) (\y rec1 rec2 -> (fst rec1 ++ fst rec2, snd rec1 ++ snd rec2 ++ [y]))
+
+caso5 :: Dato Int Char
+caso5 = C33 'z' (C33 'a' C11 (C22 5)) (C33 'b' (C22 10) C11)
